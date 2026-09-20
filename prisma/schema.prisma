@@ -1,0 +1,304 @@
+// EverFound modernized schema
+// Inferred from original 2000-2003 ColdFusion queries
+// Notes:
+// - Original used SQL Server (getdate(), etc.)
+// - Many columns are nullable because original code was loose
+// - Passwords were stored in plain text — we will hash them
+// - "live_member_ind" = 'Y'/'N' style flags are converted to booleans
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Core member / auth
+// ============================================================
+
+model Member {
+  id                    Int       @id @default(autoincrement()) @map("member_id")
+  loginEmail            String    @unique @map("login_email")
+  passwordHash          String    @map("password_hash") // was plain text "password"
+  liveMember            Boolean   @default(true) @map("live_member_ind")
+  defaultRowsPerPage    Int       @default(25) @map("default_rows_per_page")
+  defaultFolderId       Int?      @map("default_folder_id")
+  lastLoginAt           DateTime? @map("last_login_date")
+  numLogins             Int       @default(0) @map("num_logins")
+  timeZoneId            Int?      @map("timezone_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  folders               Folder[]
+  memberContacts        MemberContact[]
+  groups                Group[]
+  memberCars            MemberCar[]
+  appointmentsSent      AppointmentSend[] @relation("SentBy")
+  sessions              Session[]
+
+  @@map("members")
+}
+
+model Session {
+  id        String   @id
+  memberId  Int      @map("member_id")
+  expiresAt DateTime @map("expires_at")
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ============================================================
+// Contacts & folders
+// ============================================================
+
+model Contact {
+  id            Int       @id @default(autoincrement()) @map("contact_id")
+  contactType   String    @default("M") @map("contact_type") // 'M' = manual, others for auto-update
+  firstName     String?   @map("first_name")
+  lastName      String?   @map("last_name")
+  nickName      String?   @map("nick_name")
+  email         String?
+  // Personal address
+  pStreet1      String?   @map("p_street1")
+  pStreet2      String?   @map("p_street2")
+  pCity         String?   @map("p_city")
+  pState        String?   @map("p_state")
+  pProvince     String?   @map("p_province")
+  pZip          String?   @map("p_zip")
+  pCountryId    Int?      @map("p_country")
+  // Business address
+  bStreet1      String?   @map("b_street1")
+  bStreet2      String?   @map("b_street2")
+  bCity         String?   @map("b_city")
+  bState        String?   @map("b_state")
+  bProvince     String?   @map("b_province")
+  bZip          String?   @map("b_zip")
+  bCountryId    Int?      @map("b_country")
+  // Other common fields inferred
+  phoneHome     String?   @map("phone_home")
+  phoneWork     String?   @map("phone_work")
+  phoneMobile   String?   @map("phone_mobile")
+  birthday      DateTime?
+  anniversary   DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  memberContacts MemberContact[]
+  folderContacts FolderContact[]
+  appointmentSends AppointmentSend[]
+
+  pCountry      Country?  @relation("PersonalCountry", fields: [pCountryId], references: [id])
+  bCountry      Country?  @relation("BusinessCountry", fields: [bCountryId], references: [id])
+
+  @@map("contacts")
+}
+
+model MemberContact {
+  id         Int      @id @default(autoincrement())
+  memberId   Int      @map("member_id")
+  contactId  Int      @map("contact_id")
+  status     String   @default("A") // 'A' active, 'D' deleted
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, contactId])
+  @@map("member_contacts")
+}
+
+model Folder {
+  id        Int      @id @default(autoincrement()) @map("folder_id")
+  memberId  Int      @map("member_id")
+  name      String   @map("folder_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  contacts  FolderContact[]
+
+  @@map("folders")
+}
+
+model FolderContact {
+  id        Int @id @default(autoincrement())
+  folderId  Int @map("folder_id")
+  contactId Int @map("contact_id")
+
+  folder    Folder  @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([folderId, contactId])
+  @@map("folder_contacts")
+}
+
+// ============================================================
+// Groups
+// ============================================================
+
+model Group {
+  id            Int      @id @default(autoincrement()) @map("group_id")
+  memberId      Int      @map("member_id") // owner
+  groupName     String   @map("group_name")
+  allInviteInd  Boolean  @default(false) @map("all_invite_ind")
+  usesYearInd   Boolean  @default(false) @map("uses_year_ind")
+  yearHeader    String?  @map("year_header")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  member        Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  members       GroupMember[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id          Int       @id @default(autoincrement())
+  groupId     Int       @map("group_id")
+  contactId   Int?      @map("contact_id") // link to a contact if available
+  email       String?
+  firstName   String?   @map("first_name")
+  lastName    String?   @map("last_name")
+  yearValue   String?   @map("year_value") // e.g. graduation year
+  status      String    @default("invited") // invited | accepted | declined
+  invitedAt   DateTime  @default(now()) @map("invited_at")
+  respondedAt DateTime? @map("responded_at")
+
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("group_members")
+}
+
+// ============================================================
+// Appointments
+// ============================================================
+
+model Appointment {
+  id               Int       @id @default(autoincrement()) @map("appointment_id")
+  title            String?   @map("appointment_title")
+  appointmentDate  DateTime? @map("appointment_date")
+  startHour        Int?
+  startMinute      Int?
+  startAmPm        String?
+  endHour          Int?
+  endMinute        Int?
+  endAmPm          String?
+  location         String?
+  appointmentText  String?   @map("appointment_text")
+  recurring        Boolean   @default(false)
+  interval         String?
+  timeZoneId       Int?      @map("timezone_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  sends            AppointmentSend[]
+  notes            AppointmentNote[]
+
+  @@map("appointment")
+}
+
+model AppointmentSend {
+  id              Int       @id @default(autoincrement())
+  appointmentId   Int       @map("appointment_id")
+  contactId       Int       @map("contact_id")
+  sentByMemberId  Int       @map("sent_by_member_id")
+  sentDate        DateTime? @map("sent_date")
+  acceptance      String?   // Y/N/pending
+  keptAppointment Boolean?  @map("kept_appointment")
+
+  appointment     Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  contact         Contact     @relation(fields: [contactId], references: [id])
+  sentBy          Member      @relation("SentBy", fields: [sentByMemberId], references: [id])
+
+  @@map("appointmentsend")
+}
+
+model AppointmentNote {
+  id            Int      @id @default(autoincrement())
+  appointmentId Int      @map("appointment_id")
+  noteText      String?  @map("note_text")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@map("appointmentnote")
+}
+
+// ============================================================
+// Cars / recalls (secondary feature)
+// ============================================================
+
+model CarMake {
+  id   Int    @id @default(autoincrement())
+  name String @map("make_name")
+
+  memberCars MemberCar[]
+
+  @@map("carmake")
+}
+
+model MemberCar {
+  id         Int      @id @default(autoincrement())
+  memberId   Int      @map("member_id")
+  makeId     Int?     @map("make_id")
+  model      String?
+  year       Int?
+  vin        String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  make       CarMake? @relation(fields: [makeId], references: [id])
+
+  @@map("member_car")
+}
+
+// ============================================================
+// Lookup tables
+// ============================================================
+
+model Country {
+  id          Int    @id @default(autoincrement()) @map("countryid")
+  countryName String @map("countryname")
+
+  personalContacts Contact[] @relation("PersonalCountry")
+  businessContacts Contact[] @relation("BusinessCountry")
+
+  @@map("country")
+}
+
+model State {
+  id        Int    @id @default(autoincrement())
+  stateCode String @unique @map("statecode")
+  stateName String @map("statename")
+
+  @@map("state")
+}
+
+model TimeZone {
+  id          Int    @id @default(autoincrement()) @map("timezoneid")
+  name        String
+  offsetHours Float? @map("offset_hours")
+
+  @@map("timezone")
+}
+
+model College {
+  id          Int    @id @default(autoincrement()) @map("collegeid")
+  collegeName String @map("collegename")
+  stateCode   String? @map("statecode")
+
+  @@map("college")
+}
+
+// ============================================================
+// Other (inferred / partial)
+// ============================================================
+
+model SchedulerCycle {
+  id   Int    @id @default(autoincrement())
+  name String?
+
+  @@map("scheduler_cycle")
+}

@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/* ============================================================
+   EverFound classic theme
+   Colors and styles matched to the 2000-2003 original
+   ============================================================ */
+
+:root {
+  --ef-blue: #3333CC;
+  --ef-blue-dark: #0033CC;
+  --ef-blue-header: #3333CC;
+  --ef-green-row: #CCFFCC;
+  --ef-white: #FFFFFF;
+  --ef-text: #000000;
+  --ef-link: #0000EE;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  background-color: #FFFFFF;
+  color: var(--ef-text);
+}
+
+/* Classic table layout helpers */
+.ef-page {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.ef-header-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--ef-blue);
+}
+
+.ef-tab-bar {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--ef-blue);
+}
+
+.ef-tab-bar td {
+  padding: 0;
+  vertical-align: bottom;
+}
+
+.ef-content {
+  padding: 10px 15px;
+}
+
+/* Typography matching original classes */
+.whitebold {
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.whitebold:hover {
+  text-decoration: underline;
+}
+
+.whitesmall {
+  color: white;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.whitebig {
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.sectionheader2 {
+  font-weight: bold;
+  font-size: 14px;
+  color: var(--ef-blue-dark);
+}
+
+.smallbold {
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.special {
+  color: #CC0000;
+  font-weight: bold;
+}
+
+.submit {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  background-color: #EEEEEE;
+  border: 1px solid #999999;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+/* Form styling to feel classic */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+select,
+textarea {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  border: 1px solid #999999;
+  padding: 2px 4px;
+}
+
+/* Links */
+a {
+  color: var(--ef-link);
+}
+
+a:visited {
+  color: #551A8B;
+}
+
+/* Message banners */
+.ef-message {
+  background-color: #FFFFCC;
+  border: 1px solid #CCCC00;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.ef-error {
+  background-color: #FFCCCC;
+  border: 1px solid #CC0000;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  color: #CC0000;
+}
